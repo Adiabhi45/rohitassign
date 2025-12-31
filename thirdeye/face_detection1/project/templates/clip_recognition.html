@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CLIP Face Recognition - Face Sketch App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .upload-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .upload-box:hover {
+            border-color: #5568d3;
+            background: #f0f2ff;
+        }
+
+        .upload-box.dragover {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .preview-container {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .reference-previews {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .reference-preview {
+            position: relative;
+        }
+
+        .reference-preview img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .compare-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+
+        .compare-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .compare-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            grid-column: 1 / -1;
+        }
+
+        .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .result-card {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+
+        .result-card.matched {
+            border-color: #4CAF50;
+            background: #e8f5e9;
+        }
+
+        .result-card.no-match {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+
+        .result-filename {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+            word-break: break-word;
+        }
+
+        .result-score {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .result-score.high {
+            color: #4CAF50;
+        }
+
+        .result-score.medium {
+            color: #FF9800;
+        }
+
+        .result-score.low {
+            color: #f44336;
+        }
+
+        .result-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .badge.matched {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .badge.no-match {
+            background: #f44336;
+            color: white;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .info-box strong {
+            color: #1976D2;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .error-message {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            color: #c62828;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 CLIP Face Recognition (Local)</h1>
+            <button class="back-btn" onclick="window.location.href='/'">← Back to Sketch</button>
+        </div>
+
+        <div class="info-box">
+            <strong>🤖 Local AI Processing:</strong> This uses OpenAI's CLIP model running locally on your device. 
+            No cloud uploads required! Upload a sketch to find matches from the reference database.
+        </div>
+
+        <div class="main-content">
+            <!-- Sketch Upload Section -->
+            <div class="upload-section" style="grid-column: 1 / -1;">
+                <h2>📤 Upload Your Sketch</h2>
+                <div class="upload-box" id="sketchBox" onclick="document.getElementById('sketchInput').click()">
+                    <div class="upload-icon">🖼️</div>
+                    <div class="upload-text">Click or drag sketch image here</div>
+                </div>
+                <input type="file" id="sketchInput" class="file-input" accept="image/*">
+                <div class="preview-container" id="sketchPreview">
+                    <img class="preview-image" id="sketchImage" alt="Sketch preview">
+                </div>
+            </div>
+        </div>
+
+        <button class="compare-btn" id="compareBtn" disabled>🔍 Search Database and Find Matches</button>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <h2>📊 Recognition Results</h2>
+            <div class="results-grid" id="resultsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        let sketchFile = null;
+
+        // Sketch upload handling
+        const sketchBox = document.getElementById('sketchBox');
+        const sketchInput = document.getElementById('sketchInput');
+        const sketchPreview = document.getElementById('sketchPreview');
+        const sketchImage = document.getElementById('sketchImage');
+
+        sketchInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                sketchFile = e.target.files[0];
+                displaySketchPreview(sketchFile);
+                checkEnableCompare();
+            }
+        });
+
+        // Drag and drop for sketch
+        sketchBox.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            sketchBox.classList.add('dragover');
+        });
+
+        sketchBox.addEventListener('dragleave', () => {
+            sketchBox.classList.remove('dragover');
+        });
+
+        sketchBox.addEventListener('drop', (e) => {
+            e.preventDefault();
+            sketchBox.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                sketchFile = e.dataTransfer.files[0];
+                displaySketchPreview(sketchFile);
+                checkEnableCompare();
+            }
+        });
+
+        function displaySketchPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                sketchImage.src = e.target.result;
+                sketchPreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function checkEnableCompare() {
+            const compareBtn = document.getElementById('compareBtn');
+            compareBtn.disabled = !sketchFile;
+        }
+
+        // Compare button
+        document.getElementById('compareBtn').addEventListener('click', async function() {
+            const formData = new FormData();
+            formData.append('sketch', sketchFile);
+
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsGrid = document.getElementById('resultsGrid');
+            
+            resultsSection.style.display = 'block';
+            resultsGrid.innerHTML = '<div class="loading">🔄 Processing with CLIP model and searching database</div>';
+
+            try {
+                const response = await fetch('/clip-compare', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data.results, data.device, data.total_images, data.matches_found);
+                } else {
+                    resultsGrid.innerHTML = `<div class="error-message">❌ ${data.message}</div>`;
+                }
+            } catch (error) {
+                resultsGrid.innerHTML = `<div class="error-message">❌ Error: ${error.message}</div>`;
+            }
+        });
+
+        function displayResults(results, device, totalImages, matchesFound) {
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = '';
+
+            if (results.length === 0) {
+                resultsGrid.innerHTML = '<div class="error-message">No results found</div>';
+                return;
+            }
+
+            // Add summary info
+            const summaryDiv = document.createElement('div');
+            summaryDiv.style.gridColumn = '1 / -1';
+            summaryDiv.innerHTML = `
+                <div class="info-box">
+                    📊 <strong>Search Summary:</strong> Found ${matchesFound} matches out of ${totalImages} reference images<br>
+                    🖥️ Processed on: <strong>${device.toUpperCase()}</strong>
+                </div>
+            `;
+            resultsGrid.appendChild(summaryDiv);
+
+            results.forEach(result => {
+                const card = document.createElement('div');
+                card.className = `result-card ${result.matched ? 'matched' : 'no-match'}`;
+
+                let scoreClass = 'low';
+                if (result.prediction_score >= 70) scoreClass = 'high';
+                else if (result.prediction_score >= 50) scoreClass = 'medium';
+
+                card.innerHTML = `
+                    ${result.image_path ? `<img src="${result.image_path}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;" alt="${result.filename}">` : ''}
+                    <div class="result-filename">📄 ${result.filename}</div>
+                    <div class="result-label">Prediction Score:</div>
+                    <div class="result-score ${scoreClass}">${result.prediction_score}%</div>
+                    // <div class="result-label">Cosine Similarity: ${result.similarity}</div>
+                    <span class="badge ${result.matched ? 'matched' : 'no-match'}">
+                        ${result.matched ? '✓ Match' : '✗ No Match'}
+                    </span>
+                `;
+
+                resultsGrid.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>

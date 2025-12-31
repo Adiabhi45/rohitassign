@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Sketch Designer - ThirdEye</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- Fixed Navigation Bar -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <span class="navbar-logo">🎭</span>
+            <h1 class="navbar-title">ThirdEye Face Sketch</h1>
+        </div>
+        <div class="navbar-center">
+            <a href="/" class="navbar-btn active">Sketch Designer</a>
+            <a href="/offline-face-match" class="navbar-btn">Face Recognition</a>
+        </div>
+        <div class="navbar-user">
+            <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                <span>🌙</span>
+            </button>
+            <div class="navbar-user-info">
+                <div class="navbar-user-avatar">{{ username[0].upper() }}</div>
+                <span class="navbar-user-name">{{ username }}</span>
+            </div>
+            <a href="/logout" class="navbar-logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h3>Categories</h3>
+            <button class="cat-btn" data-cat="heads">Heads</button>
+            <button class="cat-btn" data-cat="hair">Hair</button>
+            <button class="cat-btn" data-cat="eyes">Eyes</button>
+            <button class="cat-btn" data-cat="eyebrows">Eyebrows</button>
+            <button class="cat-btn" data-cat="noses">Noses</button>
+            <button class="cat-btn" data-cat="mouths">Mouths</button>
+            <button class="cat-btn" data-cat="mustach">Mustach</button>
+            <button class="cat-btn" data-cat="ears">Ears</button>
+        </aside>
+
+        <!-- Main Canvas Area -->
+        <main>
+            <div class="canvas-wrapper">
+                <div id="canvas"></div>
+            </div>
+            
+            <div class="controls">
+                <button id="export"><span>Export PNG</span></button>
+                <button id="clear"><span>Clear All</span></button>
+            </div>
+        </main>
+
+        <!-- Assets Panel -->
+        <aside class="assets">
+            <h3 id="title">Select Category</h3>
+            <button id="del">Delete Selected</button>
+            <div id="grid"></div>
+        </aside>
+    </div>
+    <script>
+        // Theme toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+        const themeIcon = themeToggle.querySelector('span');
+        
+        // Load saved theme preference
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            body.classList.add('light-theme');
+            themeIcon.textContent = '☀️';
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('light-theme');
+            const isLight = body.classList.contains('light-theme');
+            themeIcon.textContent = isLight ? '☀️' : '🌙';
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
