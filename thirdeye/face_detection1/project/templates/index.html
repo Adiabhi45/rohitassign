@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Face Sketch Designer - ThirdEye</title>
+    <title>Face Sketch Designer </title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" crossorigin="anonymous"></script>
 </head>
@@ -12,7 +12,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <span class="navbar-logo">🎭</span>
-            <h1 class="navbar-title">ThirdEye Face Sketch</h1>
+            <h1 class="navbar-title">Foresic Face Sketch Recognition</h1>
         </div>
         <div class="navbar-center">
             <a href="/" class="navbar-btn active">Sketch Designer</a>
@@ -40,8 +40,9 @@
             <button class="cat-btn" data-cat="eyebrows">Eyebrows</button>
             <button class="cat-btn" data-cat="noses">Noses</button>
             <button class="cat-btn" data-cat="mouths">Mouths</button>
-            <button class="cat-btn" data-cat="mustach">Mustach</button>
+            <button class="cat-btn" data-cat="mustach">Mustache</button>
             <button class="cat-btn" data-cat="ears">Ears</button>
+            <button class="cat-btn" data-cat="torsos">Torsos</button>
         </aside>
 
         <!-- Main Canvas Area -->
@@ -51,8 +52,9 @@
             </div>
             
             <div class="controls">
-                <button id="export"><span>Export PNG</span></button>
-                <button id="clear"><span>Clear All</span></button>
+                <button id="export" style="display: inline-block;"><span>📥 Export PNG</span></button>
+                <button id="save" style="display: inline-block;"><span>💾 Save Sketch</span></button>
+                <button id="clear" style="display: inline-block;"><span>🗑️ Clear All</span></button>
             </div>
         </main>
 
@@ -63,6 +65,14 @@
             <div id="grid"></div>
         </aside>
     </div>
+
+    <!-- Floating Save Button -->
+    <div id="floatingSaveBtn" class="floating-save-btn" style="display: none;">
+        <button id="saveFloat" title="Save your sketch">
+            <span style="font-size: 24px;">💾</span>
+        </button>
+    </div>
+
     <script>
         // Theme toggle functionality
         const themeToggle = document.getElementById('themeToggle');

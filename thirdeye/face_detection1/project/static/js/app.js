@@ -10,6 +10,9 @@ let originalWidth = 0;
 let originalHeight = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM Content Loaded');
+    console.log('Save button element:', document.getElementById('save'));
+    
     document.querySelectorAll('.cat-btn').forEach(b => {
         b.onclick = () => {
             document.querySelectorAll('.cat-btn').forEach(x => x.classList.remove('active'));
@@ -29,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             items = {};
             positions = {}; // Clear saved positions
             sizes = {}; // Clear saved sizes
+            document.getElementById('floatingSaveBtn').style.display = 'none'; // Hide floating button
         };
     }
     
@@ -47,26 +51,75 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('save');
     if (saveBtn) {
         saveBtn.onclick = () => {
-            let d = Object.entries(items).map(([c, e]) => ({
-                category: c,
-                filename: e.dataset.filename,
-                x: parseInt(e.style.left),
-                y: parseInt(e.style.top)
-            }));
-            fetch('/save-sketch', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({sketchData: {items: d, timestamp: new Date().toISOString()}})
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Sketch saved successfully!');
-                } else {
-                    alert('Error saving sketch');
-                }
-            })
-            .catch(() => alert('Error saving sketch'));
+            if (Object.keys(items).length === 0) {
+                alert('⚠️ No sketch items to save. Please add some elements first!');
+                return;
+            }
+            
+            console.log('Downloading sketch as JPG...');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span>⏳ Downloading...</span>';
+            
+            // Get canvas element
+            const canvasElement = document.getElementById('canvas');
+            
+            // Hide resize handles before export
+            document.querySelectorAll('.resize-handle').forEach(handle => {
+                handle.style.display = 'none';
+            });
+            
+            // Use html2canvas to capture the canvas
+            html2canvas(canvasElement, {
+                backgroundColor: '#0f172a',
+                scale: 2,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                // Show resize handles again
+                document.querySelectorAll('.resize-handle').forEach(handle => {
+                    handle.style.display = '';
+                });
+                
+                // Convert to JPG and download
+                canvas.toBlob(blob => {
+                    if (!blob) {
+                        alert('❌ Error creating image. Please try again.');
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<span>💾 Save Sketch</span>';
+                        return;
+                    }
+                    
+                    // Create download link
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    
+                    // Generate filename with timestamp
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    link.download = `face_sketch_${timestamp}.jpg`;
+                    link.href = url;
+                    
+                    // Trigger download
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Clean up
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                    
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<span>💾 Save Sketch</span>';
+                    alert(`✅ Sketch saved as JPG!\n📁 File: face_sketch_${timestamp}.jpg`);
+                    console.log('JPG downloaded successfully');
+                }, 'image/jpeg', 0.95); // 0.95 = 95% quality
+            }).catch(err => {
+                console.error('Error capturing canvas:', err);
+                document.querySelectorAll('.resize-handle').forEach(handle => {
+                    handle.style.display = '';
+                });
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<span>💾 Save Sketch</span>';
+                alert('❌ Error saving sketch. Check console for details.');
+            });
         };
     }
     
@@ -76,23 +129,47 @@ document.addEventListener('DOMContentLoaded', () => {
             exportCanvasToPNG();
         };
     }
+
+    // Floating Save Button Handler
+    const saveFloatBtn = document.getElementById('saveFloat');
+    if (saveFloatBtn) {
+        saveFloatBtn.onclick = () => {
+            const saveBtn = document.getElementById('save');
+            if (saveBtn) {
+                saveBtn.click();
+            }
+        };
+    }
 });
 
 function load(c) {
     document.getElementById('title').textContent = c.toUpperCase();
     let g = document.getElementById('grid');
     g.innerHTML = 'Loading...';
+    console.log(`Fetching assets for category: ${c}`);
     fetch(`/assets/${c}`)
-        .then(r => r.json())
+        .then(r => {
+            console.log(`Response status: ${r.status}`);
+            return r.json();
+        })
         .then(d => {
+            console.log(`Assets received for ${c}:`, d);
             g.innerHTML = '';
-            d.assets.forEach(a => {
-                let div = document.createElement('div');
-                div.className = 'asset';
-                div.innerHTML = `<img src="/static/assets/${c}/${a}">`;
-                div.onclick = () => add(c, a);
-                g.appendChild(div);
-            });
+            if (d.assets && d.assets.length > 0) {
+                d.assets.forEach(a => {
+                    let div = document.createElement('div');
+                    div.className = 'asset';
+                    div.innerHTML = `<img src="/static/assets/${c}/${a}" alt="${a}">`;
+                    div.onclick = () => add(c, a);
+                    g.appendChild(div);
+                });
+            } else {
+                g.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #999;">No assets found for ${c}</p>`;
+            }
+        })
+        .catch(err => {
+            console.error('Error loading assets:', err);
+            g.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: red;">Error loading ${c}</p>`;
         });
 }
 
@@ -113,17 +190,20 @@ function add(c, f) {
     div.appendChild(img);
     div.appendChild(resizeHandle);
     
+    // Show floating save button
+    document.getElementById('floatingSaveBtn').style.display = 'block';
+    
     // Use persisted position if available, otherwise use default
     let p;
     if (positions[c]) {
         p = positions[c];
     } else {
-        p = {heads:{x:200,y:100},hair:{x:100,y:50},eyes:{x:220,y:280},eyebrows:{x:220,y:250},noses:{x:290,y:330},mouths:{x:270,y:410},ears:{x:160,y:280},mustach:{x:250,y:390}}[c] || {x:150,y:150};
+        p = {heads:{x:200,y:100},hair:{x:100,y:50},eyes:{x:220,y:280},eyebrows:{x:220,y:250},noses:{x:290,y:330},mouths:{x:270,y:410},ears:{x:160,y:280},mustach:{x:250,y:390},torsos:{x:180,y:480}}[c] || {x:150,y:150};
         positions[c] = p; // Store initial position
     }
     
     // Set z-index based on category layering order (background to foreground)
-    let zIndex = {heads:1, ears:2, hair:3, eyebrows:4, eyes:5, noses:6, mouths:7, mustach:8}[c] || 5;
+    let zIndex = {torsos:0, heads:1, ears:2, hair:3, eyebrows:4, eyes:5, noses:6, mouths:7, mustach:8}[c] || 5;
     
     div.style.left = p.x + 'px';
     div.style.top = p.y + 'px';

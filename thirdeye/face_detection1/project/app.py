@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Face Recognition System - Production Ready
@@ -22,7 +21,12 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
+# Get the absolute path of the project directory
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+STATIC_FOLDER = os.path.join(PROJECT_ROOT, 'static')
+TEMPLATES_FOLDER = os.path.join(PROJECT_ROOT, 'templates')
+
+app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='/static', template_folder=TEMPLATES_FOLDER)
 
 # Production-grade secret key from environment
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
@@ -47,7 +51,7 @@ PORT = int(os.getenv('PORT', 5000))
 HOST = os.getenv('HOST', '127.0.0.1')
 
 # Reference database configuration
-REFERENCE_FOLDER = os.getenv('REFERENCE_FOLDER', 'reference_database')
+REFERENCE_FOLDER = 'D:\\thirdeye\\thirdeye\\face_detection1\\project\\reference_database'
 DATABASE_PATH = os.getenv('DATABASE_PATH', 'face_sketch.db')
 
 # Logging configuration
@@ -321,10 +325,16 @@ def index():
 @login_required
 def get_assets(category):
     """Get list of assets for a specific category"""
-    asset_path = os.path.join('static', 'assets', category)
+    asset_path = os.path.join(STATIC_FOLDER, 'assets', category)
+    app.logger.info(f'Looking for assets in: {asset_path}')
+    app.logger.info(f'Exists: {os.path.exists(asset_path)}')
+    
     if os.path.exists(asset_path):
-        files = [f for f in os.listdir(asset_path) if f.endswith('.png')]
+        files = sorted([f for f in os.listdir(asset_path) if f.lower().endswith('.png')])
+        app.logger.info(f'Assets for {category}: {files}')
         return jsonify({'assets': files})
+    
+    app.logger.warning(f'Asset path not found: {asset_path}')
     return jsonify({'assets': []})
 
 @app.route('/save-sketch', methods=['POST'])
@@ -406,7 +416,7 @@ def clip_compare():
             sketch_features = sketch_features / sketch_features.norm(dim=-1, keepdim=True)
         
         # Get all reference images from database folder
-        reference_folder = 'reference_database'
+        reference_folder = 'D:\\thirdeye\\thirdeye\\face_detection1\\project\\reference_database'
         
         if not os.path.exists(reference_folder):
             return jsonify({
@@ -451,7 +461,7 @@ def clip_compare():
                     'filename': ref_filename,
                     'similarity': round(similarity, 4),
                     'prediction_score': round(prediction_score, 2),
-                    'matched': prediction_score >= 30,  # Consider matched if score >= 50%
+                    'matched': prediction_score >= 75,  # Consider matched if score >= 75%
                     'image_path': f'/reference-image/{ref_filename}'
                 })
                 
@@ -468,7 +478,7 @@ def clip_compare():
         # Sort results by prediction score (highest first)
         results.sort(key=lambda x: x.get('prediction_score', 0), reverse=True)
         
-        # Get top matches (score >= 50%)
+        # Get top matches (score >= 75%)
         top_matches = [r for r in results if r.get('matched', False)]
         
         return jsonify({
@@ -476,7 +486,7 @@ def clip_compare():
             'message': f'Searched {len(results)} reference images in database',
             'total_images': len(results),
             'matches_found': len(top_matches),
-            'results': results,
+            'results': results,  # Return all results for gallery
             'device': dev
         })
         
@@ -487,8 +497,8 @@ def clip_compare():
             'message': f'Error processing images: {str(e)}'
         }), 500
 
-@app.route('/reference-image/<filename>')
-# @login_required
+@app.route('/reference-image/<path:filename>')
+
 def get_reference_image(filename):
     """Serve reference images from database with security"""
     try:
@@ -611,8 +621,9 @@ def offline_face_match_process():
                     'filename': ref_filename,
                     'similarity': round(similarity, 4),
                     'prediction_score': round(prediction_score, 2),
-                    'matched': prediction_score >= 35,  # Slightly higher threshold for better accuracy
-                    'image_path': f'/reference-image/{ref_filename}'
+                    'matched': prediction_score >= 50,  # Lower threshold to show more matches
+                    'image_path': url_for('get_reference_image', filename=ref_filename)
+
                 })
                 
                 if DEBUG_MODE:
@@ -629,8 +640,8 @@ def offline_face_match_process():
         # Get best match
         best_match = matches[0] if matches else None
         
-        # Check if best match meets threshold (75% for better accuracy)
-        if best_match and best_match['prediction_score'] >= 35:
+        # Check if best match meets threshold (50% for better accuracy)
+        if best_match and best_match['prediction_score'] >= 50:
             app.logger.info(f'[SUCCESS] MATCH FOUND: {best_match["filename"]} ({best_match["prediction_score"]}%)')
             if DEBUG_MODE:
                 print(f'\n[SUCCESS] MATCH FOUND: {best_match["filename"]} ({best_match["prediction_score"]}%)\n')
@@ -639,19 +650,21 @@ def offline_face_match_process():
                 'message': 'Face matched successfully!',
                 'best_match': best_match,
                 'total_images': len(matches),
-                'threshold': 35,
+                'threshold': 50,
+                'matches': matches,  # Return all matches for gallery display
                 'device': dev
             })
         else:
-            app.logger.info(f'[ERROR] NO MATCH FOUND (threshold: 75%, best: {best_match["prediction_score"] if best_match else 0}%)')
+            app.logger.info(f'[ERROR] NO MATCH FOUND (threshold: 50%, best: {best_match["prediction_score"] if best_match else 0}%)')
             if DEBUG_MODE:
-                print(f'\n[ERROR] NO MATCH FOUND (threshold: 75%, best: {best_match["prediction_score"] if best_match else 0}%)\n')
+                print(f'\n[ERROR] NO MATCH FOUND (threshold: 50%, best: {best_match["prediction_score"] if best_match else 0}%)\n')
             return jsonify({
                 'success': False,
-                'message': f'No match found in the database. Best match: {best_match["prediction_score"] if best_match else 0}% (threshold: 75%)',
+                'message': f'No match found in the database. Best match: {best_match["prediction_score"] if best_match else 0}% (threshold: 50%)',
                 'best_match': best_match,  # Still return best attempt
                 'total_images': len(matches),
-                'threshold': 35,
+                'threshold': 50,
+                'matches': matches,  # Return all matches for gallery display
                 'device': dev
             })
         
